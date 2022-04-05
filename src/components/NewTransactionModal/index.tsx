@@ -1,11 +1,18 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useContext, useState } from 'react';
 import Modal from 'react-modal'
+import Swal from 'sweetalert2'
+import withReactContent from 'sweetalert2-react-content'
 
-import { Container, TransactionTypeContainer, RadioButton } from './styles';
+import { TransactionsContext } from '../../contexts/TransactionsContext';
+
 import incomeImg from '../../assets/income.svg'
 import outcomeImg from '../../assets/outcome.svg'
 import closeImg from '../../assets/close.svg'
-import { api } from '../../services/api';
+
+import { Container, TransactionTypeContainer, RadioButton } from './styles';
+
+
+const MySwal = withReactContent(Swal)
 
 
 interface INewTransactionModalProps {
@@ -15,23 +22,46 @@ interface INewTransactionModalProps {
 
 export function NewTransactionModal({isOpen, onRequestClose} : INewTransactionModalProps){
 
+    const { createTransaction } = useContext(TransactionsContext);
 
     const [title, setTitle] = useState('')
     const [value, setValue] = useState(0)
     const [category, setCategory] = useState('')
     const [type, setType] = useState('deposit');
 
-    function handleCreateNewTransaction(event: FormEvent){
+    async function handleCreateNewTransaction(event: FormEvent){
         event.preventDefault();
 
-        const data = {
+        await createTransaction({
             title,
-            value,
+            amount: value,
             category,
             type
-        };
+        }).then( () => {
 
-        api.post('/transactions', data)
+            MySwal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                text: 'transação cadastrada com sucesso!',
+            });
+
+        }).catch( () => {
+
+            MySwal.fire({
+                icon: 'error',
+                title: 'Erro!',
+                text: 'não foi possível realizar a transação. Tente mais tarde',
+            });
+
+        })
+
+        setTitle('')
+        setCategory('')
+        setType('deposit')
+        setValue(0)
+
+        onRequestClose();
+        
     }
 
     return(
@@ -49,9 +79,26 @@ export function NewTransactionModal({isOpen, onRequestClose} : INewTransactionMo
         <Container onSubmit={handleCreateNewTransaction}>
             <h2>Cadastrar transação</h2>
 
-            <input type="text" placeholder='Título' value={title} onChange={event => setTitle(event.target.value)}/>
-            <input type="number" placeholder='Valor' value={value} onChange={event => setValue(+event.target.value)}/>
-            <input type="text" placeholder='Categoria' value={category} onChange={event => setCategory(event.target.value)}/>
+            <input 
+                type="text"
+                placeholder='Título'
+                value={title}
+                onChange={event => setTitle(event.target.value)}
+            />
+
+            <input 
+                type="number" 
+                placeholder='Valor' 
+                value={value} 
+                onChange={event => setValue(+event.target.value)}
+            />
+
+            <input 
+                type="text" 
+                placeholder='Categoria'
+                value={category}
+                onChange={event => setCategory(event.target.value)}
+            />
 
             <TransactionTypeContainer>
                 <RadioButton type='button' onClick={() => setType('deposit')} isActive={type === 'deposit'} activeColor="green">
